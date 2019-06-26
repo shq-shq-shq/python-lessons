@@ -436,8 +436,8 @@ DEFAULT_CONFIG = {"fill": "",
                   "arrow": "none",
                   "text": "",
                   "justify": "center",
-                  "font": ("helvetica", 12, "normal")}
-
+                  "font": ("helvetica", 12, "normal"),
+                  "dash": None}
 
 class GraphicsObject:
     """Generic base class for all of the drawable objects"""
@@ -666,7 +666,7 @@ class Circle(Oval):
 class Line(_BBox):
 
     def __init__(self, topLeft, bottomRight):
-        _BBox.__init__(self, topLeft, bottomRight, ["arrow", "fill", "width"])
+        _BBox.__init__(self, topLeft, bottomRight, ["arrow", "fill", "width", "dash"])
         self.setFill(DEFAULT_CONFIG['outline'])
         self.setOutline = self.setFill
 
@@ -689,6 +689,9 @@ class Line(_BBox):
         if not option in ["first", "last", "both", "none"]:
             raise GraphicsError(BAD_OPTION)
         self._reconfig("arrow", option)
+
+    def setDash(self, a, b):
+        self._reconfig("dash", (a, b))
 
 
 class Polygon(GraphicsObject):
