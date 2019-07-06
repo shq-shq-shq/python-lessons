@@ -38,7 +38,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         super(Player, self).__init__()
 
-        self.normalImage = pygame.image.load('jet_128.png').convert()
+        self.normalImage = pygame.image.load('img/jet_128.png').convert()
         self.normalImage.set_colorkey((0, 0, 0), RLEACCEL)
         self.normalImage = self.normalImage.convert_alpha()
         self.damagedImage = replaceColorKeepAlpha(self.normalImage, (255, 0, 0, 128))
@@ -91,7 +91,7 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self):
         super(Enemy, self).__init__()
 
-        self.image = pygame.image.load('ufo_96.png').convert()
+        self.image = pygame.image.load('img/ufo_96.png').convert()
         self.image.set_colorkey((0, 0, 0), RLEACCEL)
         self.image = self.image.convert_alpha()
 
@@ -122,7 +122,7 @@ class Missile(pygame.sprite.Sprite):
     def __init__(self, coord):
         super(Missile, self).__init__()
 
-        self.image = pygame.image.load('missile.png').convert()
+        self.image = pygame.image.load('img/missile.png').convert()
         self.image.set_colorkey((255, 255, 255), RLEACCEL)
 
         self.rect = self.image.get_rect(center=coord)
@@ -237,7 +237,7 @@ def main():
     pygame.init()
     SCREEN = pygame.display.set_mode((800, 600))
     pygame.display.set_caption("UFO Fighter")
-    pygame.display.set_icon(pygame.image.load('ufo_96.png'))
+    pygame.display.set_icon(pygame.image.load('img/ufo_96.png'))
 
     controller = Controller()
 
