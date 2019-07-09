@@ -14,24 +14,25 @@ COMP_SCREEN_RECT = pygame.rect.Rect((23,33), (105,64))
 COMP_IMAGE = pygame.image.load("img/computer.jpg").convert()
 
 APPLE_LOGO = pygame.image.load("img/apple.png").convert()
-APPLE_ADMIN_IMAGE = pygame.image.load("img/steveJobs.jpg").convert()
+STEVE_JOBS_FACE = pygame.image.load("img/steveJobs.jpg").convert()
 
 WINDOWS_LOGO = pygame.image.load("img/windows.png").convert()
-WINDOWS_ADMIN_IMAGE = pygame.image.load("img/billGates.jpg").convert()
+BILL_GATES_FACE = pygame.image.load("img/billGates.jpg").convert()
 
 LINUX_LOGO = pygame.image.load("img/linux.png").convert()
+LINUS_TORVALDS_FACE = pygame.image.load("img/linusTorvalds.jpg").convert()
 
 INSTALLATION_CYCLES = 60
 
-COMPUTER_GRID_SIZE = (4, 3)
-COMPUTER_GRID_COORD = (50, 50)
-COMPUTERS_CELL_WH = (180, 180)
+COMP_GRID_SIZE = (4, 3)
+COMP_GRID_COORD = (50, 50)
+COMP_WH = (180, 180)
 
 NEW_OS_EVENT = pygame.USEREVENT + 1
 
 pygame.time.set_timer(NEW_OS_EVENT, 1000)
 
-computerStates = [[['L', 0] for x in range(COMPUTER_GRID_SIZE[0])] for y in range(COMPUTER_GRID_SIZE[1])]
+computerStates = [[['L', 0] for x in range(COMP_GRID_SIZE[0])] for y in range(COMP_GRID_SIZE[1])]
 
 running = True
 
@@ -47,57 +48,69 @@ while running:
         elif event.type == MOUSEBUTTONDOWN:
             x, y = event.pos
 
-            cellX = (x - COMPUTER_GRID_COORD[0]) // COMPUTERS_CELL_WH[0]
-            cellY = (y - COMPUTER_GRID_COORD[1]) // COMPUTERS_CELL_WH[1]
+            cellX = (x - COMP_GRID_COORD[0]) // COMP_WH[0]
+            cellY = (y - COMP_GRID_COORD[1]) // COMP_WH[1]
 
-            if 0 <= cellX < COMPUTER_GRID_SIZE[0] and 0 <= cellY < COMPUTER_GRID_SIZE[1]:
-                cellOffsetX = x - COMPUTER_GRID_COORD[0] - cellX * COMPUTERS_CELL_WH[0]
-                cellOffsetY = y - COMPUTER_GRID_COORD[1] - cellY * COMPUTERS_CELL_WH[1]
+            if 0 <= cellX < COMP_GRID_SIZE[0] and 0 <= cellY < COMP_GRID_SIZE[1]:
+                cellOffsetX = x - COMP_GRID_COORD[0] - cellX * COMP_WH[0]
+                cellOffsetY = y - COMP_GRID_COORD[1] - cellY * COMP_WH[1]
 
                 if COMP_SCREEN_RECT.collidepoint((cellOffsetX, cellOffsetY)):
-                    computerStates[cellY][cellX] = ['L', 0]
+                    computerStates[cellY][cellX] = ['L', INSTALLATION_CYCLES]
 
         elif event.type == NEW_OS_EVENT:
-            newInstallationCoord = (
-            random.randint(0, COMPUTER_GRID_SIZE[0] - 1), random.randint(0, COMPUTER_GRID_SIZE[1] - 1))
-            newInstallationOS = random.choice(['W', 'M'])
+            instCoord = (random.randint(0, COMP_GRID_SIZE[0] - 1), random.randint(0, COMP_GRID_SIZE[1] - 1))
+            instOS = random.choice(['W', 'M'])
 
-            compState = computerStates[newInstallationCoord[1]][newInstallationCoord[0]]
+            os, timer = computerStates[instCoord[1]][instCoord[0]]
 
-            if compState[0] != newInstallationOS and compState[1] == 0:
-                computerStates[newInstallationCoord[1]][newInstallationCoord[0]] = [newInstallationOS,
-                                                                                    INSTALLATION_CYCLES]
+            if os != instOS and timer == 0:
+                computerStates[instCoord[1]][instCoord[0]] = [instOS, INSTALLATION_CYCLES]
 
-    for y in range(COMPUTER_GRID_SIZE[1]):
-        for x in range(COMPUTER_GRID_SIZE[0]):
+    for y in range(COMP_GRID_SIZE[1]):
+        for x in range(COMP_GRID_SIZE[0]):
             if computerStates[y][x][1] > 0:
                 computerStates[y][x][1] -= 1
 
     screen.fill((255, 255, 255), pygame.rect.Rect((0, 0), SCREEN_SIZE))
 
-    for y in range(COMPUTER_GRID_SIZE[1]):
-        for x in range(COMPUTER_GRID_SIZE[0]):
-            coord = (COMPUTER_GRID_COORD[0] + x * COMPUTERS_CELL_WH[0],
-                     COMPUTER_GRID_COORD[1] + y * COMPUTERS_CELL_WH[1])
+    for y in range(COMP_GRID_SIZE[1]):
+        for x in range(COMP_GRID_SIZE[0]):
+            coordX = COMP_GRID_COORD[0] + x * COMP_WH[0]
+            coordY = COMP_GRID_COORD[1] + y * COMP_WH[1]
 
-            screen.blit(COMP_IMAGE, coord)
+            screen.blit(COMP_IMAGE, (coordX, coordY))
 
-            computerState, count = computerStates[y][x]
+            currentOS, timer = computerStates[y][x]
 
             screenImg = None
-            if computerState == 'L':
-                screenImg = LINUX_LOGO
-            elif computerState == 'W':
-                if count > 0:
-                    screenImg = WINDOWS_ADMIN_IMAGE
+
+            if currentOS == 'L':
+                if timer > 0:
+                    screenImg = LINUS_TORVALDS_FACE
+                else:
+                    screenImg = LINUX_LOGO
+
+            elif currentOS == 'W':
+                if timer > 0:
+                    screenImg = BILL_GATES_FACE
                 else:
                     screenImg = WINDOWS_LOGO
-            elif computerState == 'M':
-                if count > 0:
-                    screenImg = APPLE_ADMIN_IMAGE
+
+            elif  currentOS == 'M':
+                if timer > 0:
+                    screenImg = STEVE_JOBS_FACE
                 else:
                     screenImg = APPLE_LOGO
 
-            screen.blit(screenImg, (coord[0] + COMP_SCREEN_RECT[0], coord[1] + COMP_SCREEN_RECT[1]))
+            screen.blit(screenImg, (coordX + COMP_SCREEN_RECT[0], coordY + COMP_SCREEN_RECT[1]))
+
+            if timer > 0:
+                progressBarX = COMP_SCREEN_RECT.width * ((INSTALLATION_CYCLES - timer) / INSTALLATION_CYCLES)
+
+                screen.fill((240, 240, 255), pygame.rect.Rect((coordX + COMP_SCREEN_RECT.left, coordY + COMP_SCREEN_RECT.bottom - 5),
+                                                              (progressBarX, 5)))
+                screen.fill((128, 128, 255), pygame.rect.Rect((coordX + COMP_SCREEN_RECT.left + progressBarX, coordY + COMP_SCREEN_RECT.bottom - 5),
+                                                              (COMP_SCREEN_RECT.width - progressBarX, 5)))
 
     pygame.display.flip()
