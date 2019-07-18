@@ -162,12 +162,17 @@ __version__ = "5.0"
 #     Added ability to set text atttributes.
 #     Added Entry boxes.
 
-import time, os, sys
+import time, os, sys, math
 
 try:  # import as appropriate for 2.x vs. 3.x
     import tkinter as tk
 except:
     import Tkinter as tk
+
+try:
+    import PIL.ImageTk
+except:
+    pass
 
 
 ##########################################################################
@@ -189,6 +194,8 @@ _root = tk.Tk()
 _root.withdraw()
 
 _update_lasttime = time.time()
+
+EPSILON = 1e-6
 
 
 def update(rate=None):
@@ -545,6 +552,101 @@ class GraphicsObject:
         pass  # must override in subclass
 
 
+class Vector:
+    def __init__(self, x, y):
+        self.x = float(x)
+        self.y = float(y)
+
+    def __repr__(self):
+        return "Vector({}, {})".format(self.x, self.y)
+
+    def __sub__(self, other):
+        if isinstance(other, Vector):
+            return Vector(self.x - other.x, self.y - other.y)
+
+        raise NotImplementedError
+
+    def __add__(self, other):
+        if isinstance(other, Vector):
+            return Vector(self.x + other.x, self.y + other.y)
+
+        if isinstance(other, Point):
+            return Point(self.x + other.x, self.y + other.y)
+
+        raise NotImplementedError
+
+    def __neg__(self):
+        return Vector(-self.x, -self.y)
+
+    def __mul__(self, other):
+        return Vector(self.x * other, self.y * other)
+
+    def __truediv__(self, other):
+        return Vector(self.x / other, self.y / other)
+
+    def __floordiv__(self, other):
+        return Vector(self.x // other, self.y // other)
+
+    def length(self):
+        return math.sqrt(self.lengthSquared())
+
+    def lengthSquared(self):
+        return self.x ** 2 + self.y ** 2
+
+    def slope(self):
+        return self.y / self.x
+
+    def angle(self):
+        return math.atan2(self.y, self.x)
+
+    def cross(self, other):
+        if not isinstance(other, Vector):
+            raise ValueError
+        return self.x * other.y - self.y * other.x
+
+    def dot(self, other):
+        if not isinstance(other, Vector):
+            raise ValueError
+        return self.x * other.x + self.y * other.y
+
+    def isInBox(self, box):
+        return pointIntersectsBox(self, box.topLeft, box.bottomRight)
+
+def pointIntersectsBox(point, topLeft, bottomRight):
+    return topLeft.x <= point.x <= bottomRight.x and topLeft.y <= point.y <= bottomRight.y
+
+def pointIntersectsLine(point, topLeft, bottomRight):
+    if topLeft.x == bottomRight.x:
+        return point.x == topLeft.x and topLeft.y <= point.y <= bottomRight.y
+    else:
+        return abs((point - topLeft).slope() - (bottomRight - topLeft).slope()) < EPSILON
+
+def pointIntersectsCircle(point, center, radius):
+    return (center - point).lengthSquared() <= radius ** 2 + EPSILON
+
+def circleIntersectsLine(center, radius, lineBegin, lineEnd):
+    # http://mathworld.wolfram.com/Circle-LineIntersection.html
+    lenSq = (lineBegin - lineEnd).lengthSquared()
+    lineCrossProd = (lineBegin - center).cross(lineEnd - center)
+    d = (radius ** 2) * lenSq - (lineCrossProd ** 2)
+    return d >= -EPSILON
+
+def circleIntersectsBox(center, radius, topLeft, bottomRight):
+    return center.isInBox(topLeft, bottomRight) \
+           or circleIntersectsLine(center, radius, topLeft, Vector(bottomRight.x, topLeft.y)) \
+           or circleIntersectsLine(center, radius, topLeft, Vector(topLeft.x, bottomRight.y)) \
+           or circleIntersectsLine(center, radius, Vector(bottomRight.x, topLeft.y), bottomRight) \
+           or circleIntersectsLine(center, radius, Vector(topLeft.x, bottomRight.y), bottomRight)
+
+def lineIntersectsLine(aTopLeft, aBottomRight, bTopLeft, bBottomRight):
+    pass
+
+def lineIntersectsBox(lineTopLeft, lineBottomRight, boxTopLeft, boxBottomRight):
+    return lineIntersectsLine(lineTopLeft, lineBottomRight, boxTopLeft, Vector(boxBottomRight.x, boxTopLeft.y)) \
+           or lineIntersectsLine(lineTopLeft, lineBottomRight, boxTopLeft, Vector(boxTopLeft.x, boxBottomRight.y)) \
+           or lineIntersectsLine(lineTopLeft, lineBottomRight, Vector(boxBottomRight.x, boxTopLeft.y), boxBottomRight) \
+           or lineIntersectsLine(lineTopLeft, lineBottomRight, Vector(boxTopLeft.x, boxBottomRight.y), boxBottomRight)
+
 class Point(GraphicsObject):
     def __init__(self, x, y):
         GraphicsObject.__init__(self, ["outline", "fill"])
@@ -571,6 +673,41 @@ class Point(GraphicsObject):
     def getX(self): return self.x
 
     def getY(self): return self.y
+
+    def vec(self): return Vector(self.x, self.y)
+
+    def __sub__(self, other):
+        if isinstance(other, Vector):
+            return Point(self.x - other.x, self.y - other.y)
+
+        if isinstance(other, Point):
+            return Vector(self.x - other.x, self.y - other.y)
+
+        raise NotImplementedError
+
+    def __add__(self, other):
+        if isinstance(other, Vector):
+            return Point(self.x + other.x, self.y + other.y)
+
+        raise NotImplementedError
+
+    def distanceTo(self, otherPoint):
+        return (self - otherPoint).length()
+
+    def intersects(self, other):
+        if isinstance(other, Point):
+            return self.x == other.x and self.y == other.y
+
+        if isinstance(other, Line):
+            return pointIntersectsLine(self, other.topLeft, other.bottomRight)
+
+        if isinstance(other, Circle):
+            return pointIntersectsCircle(self, other.getCenter(), other.radius)
+
+        if isinstance(other, _BBox):
+            return pointIntersectsBox(self, other.topLeft, other.bottomRight)
+
+        raise NotImplementedError
 
 
 class _BBox(GraphicsObject):
@@ -599,6 +736,21 @@ class _BBox(GraphicsObject):
         topLeft = self.topLeft
         bottomRight = self.bottomRight
         return Point((topLeft.x + bottomRight.x) / 2.0, (topLeft.y + bottomRight.y) / 2.0)
+
+    def intersects(self, other):
+        if isinstance(other, Point):
+            return other.intersects(self)
+
+        # if isinstance(other, Circle):
+        #     return other.getCenter().intersects(self) or
+
+        if isinstance(other, _BBox):
+            return not (
+                self.bottomRight.x < other.topLeft.x or self.topLeft.x > other.bottomRight.x
+                or self.bottomRight.y < other.topLeft.y or self.topLeft.y > other.bottomRight.y
+            )
+
+        raise NotImplementedError
 
 
 class Rectangle(_BBox):
@@ -662,6 +814,16 @@ class Circle(Oval):
     def getRadius(self):
         return self.radius
 
+    def intersects(self, other):
+        if isinstance(other, Line):
+            # http://mathworld.wolfram.com/Circle-LineIntersection.html
+            lenSq = other.lengthSquared()
+            lineCrossProd = other.topLeft.cross(other.bottomRight)
+            d = (self.radius ** 2) * lenSq - (lineCrossProd ** 2)
+            return d >= -EPSILON
+
+        return super().intersects(other)
+
 
 class Line(_BBox):
 
@@ -690,8 +852,13 @@ class Line(_BBox):
             raise GraphicsError(BAD_OPTION)
         self._reconfig("arrow", option)
 
-    def setDash(self, a, b):
-        self._reconfig("dash", (a, b))
+    def setDash(self, dashLen, gapLen):
+        self._reconfig("dash", (dashLen, gapLen))
+
+    def intersects(self, other):
+        if isinstance(other, Circle):
+            return other.intersects(self)
+        return super().intersects(other)
 
 
 class Polygon(GraphicsObject):
@@ -884,7 +1051,9 @@ class Image(GraphicsObject):
         self.anchor = p.clone()
         self.imageId = Image.idCount
         Image.idCount = Image.idCount + 1
-        if len(pixmap) == 1:  # file name provided
+        if isinstance(pixmap[0], tk.Image) or isinstance(pixmap[0], PIL.ImageTk.PhotoImage):
+            self.img = pixmap
+        elif len(pixmap) == 1:  # file name provided
             self.img = tk.PhotoImage(file=pixmap[0], master=_root)
         else:  # width and height provided
             width, height = pixmap
